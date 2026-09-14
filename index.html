@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Degaliniu Kainu Palyginimas</title>
+    <link rel="stylesheet" href="https://leaflet.js.org/examples/css/leaflet.css" />
+    <script src="https://leaflet.js.org/examples/js/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .search-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .search-panel h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        .map-container {
+            border-radius: 8px;
+            overflow: hidden;
+            height: 400px;
+            border: 1px solid #ddd;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .results {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+        }
+        
+        .results h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .station-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #28a745;
+            transition: all 0.3s;
+        }
+        
+        .station-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+        
+        .station-card h3 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .station-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.95em;
+            color: #666;
+        }
+        
+        .price-badge {
+            background: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .distance-badge {
+            background: #007bff;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+            margin-left: 5px;
+        }
+        
+        .best-offer {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            grid-column: 1 / -1;
+        }
+        
+        .best-offer h3 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⛽ Degaliniu Kainu Palyginimas</h1>
+            <p>Raskite pigiausią degalinę šalia jūsų su integruotu žemėlapiu (offline versija)</p>
+        </header>
+        
+        <div class="content">
+            <div class="search-panel">
+                <h2>Paieška</h2>
+                
+                <div class="form-group">
+                    <label for="location-select">Pasirinkite miestą:</label>
+                    <select id="location-select">
+                        <option value="">-- Pasirinkite lokacija --</option>
+                        <option value="vilnius">Vilnius</option>
+                        <option value="kaunas">Kaunas</option>
+                        <option value="klaipeda">Klaipėda</option>
+                        <option value="siauliai">Šiauliai</option>
+                        <option value="panevezys">Panevėžys</option>
+                        <option value="custom">Pasirinktinė lokacija</option>
+                    </select>
+                </div>
+                
+                <div id="custom-coords" style="display:none;">
+                    <div class="form-group">
+                        <label for="latitude">Platuma:</label>
+                        <input type="number" id="latitude" placeholder="54.6872" step="0.0001">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="longitude">Ilguma:</label>
+                        <input type="number" id="longitude" placeholder="25.2797" step="0.0001">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fuel-type">Kuro tipas:</label>
+                    <select id="fuel-type">
+                        <option value="95">Benzinas 95</option>
+                        <option value="98">Benzinas 98</option>
+                        <option value="D">Dyzelis</option>
+                        <option value="LPG">LPG</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="radius">Paieškos spindulys (km):</label>
+                    <input type="number" id="radius" value="50" min="5" max="200" step="5">
+                </div>
+                
+                <div class="button-group">
+                    <button onclick="searchStations()">🔍 Ieškoti</button>
+                    <button class="secondary" onclick="getUserLocation()">📍 Mano lokacija</button>
+                </div>
+                
+                <div class="error" id="error"></div>
+                <div class="loading" id="loading">Ieškoma degalinių...</div>
+            </div>
+            
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+            
+            <div class="results" id="results" style="display:none;">
+                <div id="best-offer"></div>
+                <h2>Degalinės šalia jūsų</h2>
+                <div id="stations-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Sample duomenys - Lietuvos degalinės
+        const FUEL_STATIONS = [
+            // Vilnius
+            {degaline: "Statoil Vilnius", vieta: "Vilnius", latitude: 54.6872, longitude: 25.2797, price_95: 1.45, price_98: 1.55, price_D: 1.32, price_LPG: 0.65, address: "Geležinio Vilko g. 10"},
+            {degaline: "Shell Vilnius", vieta: "Vilnius", latitude: 54.6900, longitude: 25.2800, price_95: 1.47, price_98: 1.57, price_D: 1.29, price_LPG: 0.67, address: "Konstitucijos pr. 7"},
+            {degaline: "OMV Vilnius", vieta: "Vilnius", latitude: 54.6850, longitude: 25.2850, price_95: 1.43, price_98: 1.53, price_D: 1.30, price_LPG: 0.66, address: "Žvėrynų g. 1"},
+            {degaline: "Lukoil Vilnius", vieta: "Vilnius", latitude: 54.7000, longitude: 25.2600, price_95: 1.42, price_98: 1.52, price_D: 1.31, price_LPG: 0.64, address: "Žemynos g. 5"},
+            
+            // Kaunas
+            {degaline: "Statoil Kaunas", vieta: "Kaunas", latitude: 54.8973, longitude: 23.9021, price_95: 1.44, price_98: 1.54, price_D: 1.31, price_LPG: 0.65, address: "Karaliaus Mindaugo pr. 10"},
+            {degaline: "Shell Kaunas", vieta: "Kaunas", latitude: 54.9000, longitude: 23.9050, price_95: 1.46, price_98: 1.56, price_D: 1.28, price_LPG: 0.68, address: "Laisvės a. 99"},
+            {degaline: "OMV Kaunas", vieta: "Kaunas", latitude: 54.8900, longitude: 23.9100, price_95: 1.42, price_98: 1.52, price_D: 1.32, price_LPG: 0.66, address: "Savanorių pr. 281"},
+            
+            // Klaipėda
+            {degaline: "Statoil Klaipėda", vieta: "Klaipėda", latitude: 55.7206, longitude: 21.1441, price_95: 1.46, price_98: 1.56, price_D: 1.33, price_LPG: 0.67, address: "Taikos pr. 50"},
+            {degaline: "Shell Klaipėda", vieta: "Klaipėda", latitude: 55.7230, longitude: 21.1470, price_95: 1.48, price_98: 1.58, price_D: 1.30, price_LPG: 0.69, address: "Nemuno g. 1"},
+            
+            // Šiauliai
+            {degaline: "Statoil Šiauliai", vieta: "Šiauliai", latitude: 55.9311, longitude: 23.3162, price_95: 1.43, price_98: 1.53, price_D: 1.30, price_LPG: 0.65, address: "Vilniaus g. 140"},
+            {degaline: "OMV Šiauliai", vieta: "Šiauliai", latitude: 55.9350, longitude: 23.3200, price_95: 1.41, price_98: 1.51, price_D: 1.31, price_LPG: 0.64, address: "Panevėžio g. 50"},
+            
+            // Panevėžys
+            {degaline: "Statoil Panevėžys", vieta: "Panevėžys", latitude: 55.7386, longitude: 24.3633, price_95: 1.44, price_98: 1.54, price_D: 1.32, price_LPG: 0.66, address: "Respublikos a. 10"},
+            {degaline: "Shell Panevėžys", vieta: "Panevėžys", latitude: 55.7410, longitude: 24.3660, price_95: 1.47, price_98: 1.57, price_D: 1.29, price_LPG: 0.68, address: "Laisės g. 5"},
+        ];
+        
+        const LOCATIONS = {
+            vilnius: [54.6872, 25.2797],
+            kaunas: [54.8973, 23.9021],
+            klaipeda: [55.7206, 21.1441],
+            siauliai: [55.9311, 23.3162],
+            panevezys: [55.7386, 24.3633]
+        };
+        
+        let map;
+        let userMarker;
+        let stationMarkers = [];
+        
+        // Apskaičiuoti atstumą (Haversine formulė)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Žemės spindulys km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+        
+        // Inicijalizuoti žemėlapį
+        function initMap() {
+            map = L.map('map').setView([54.6872, 25.2797], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+        }
+        
+        // Pasirinko lokacija
+        document.getElementById('location-select').addEventListener('change', function(e) {
+            const value = e.target.value;
+            document.getElementById('custom-coords').style.display = value === 'custom' ? 'block' : 'none';
+            
+            if (value && value !== 'custom' && LOCATIONS[value]) {
+                const [lat, lon] = LOCATIONS[value];
+                document.getElementById('latitude').value = lat;
+                document.getElementById('longitude').value = lon;
+                map.setView([lat, lon], 11);
+            }
+        });
+        
+        // Gauti vartotojo lokacija
+        function getUserLocation() {
+            if (navigator.geolocation) {
+                document.getElementById('loading').style.display = 'block';
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        document.getElementById('latitude').value = lat.toFixed(4);
+                        document.getElementById('longitude').value = lon.toFixed(4);
+                        document.getElementById('location-select').value = '';
+                        map.setView([lat, lon], 12);
+                        document.getElementById('loading').style.display = 'none';
+                    },
+                    function(error) {
+                        showError('Nepavyko gauti jūsų lokacijos: ' + error.message);
+                        document.getElementById('loading').style.display = 'none';
+                    }
+                );
+            } else {
+                showError('Jūsų naršyklė nepalaiko geolokacijos');
+            }
+        }
+        
+        // Rodyti klaidą
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Ieškoti degalinių
+        function searchStations() {
+            const lat = parseFloat(document.getElementById('latitude').value);
+            const lon = parseFloat(document.getElementById('longitude').value);
+            const fuelType = document.getElementById('fuel-type').value;
+            const radius = parseFloat(document.getElementById('radius').value);
+            
+            if (!lat || !lon) {
+                showError('Prašome pasirinkti lokacija');
+                return;
+            }
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            
+            // Šiame timeout simuluojame API kvietimą
+            setTimeout(() => {
+                // Filtruoti ir rūšiuoti degalines
+                const nearby = FUEL_STATIONS
+                    .map(station => ({
+                        ...station,
+                        distance_km: calculateDistance(lat, lon, station.latitude, station.longitude)
+                    }))
+                    .filter(station => station.distance_km <= radius && station[`price_${fuelType}`])
+                    .sort((a, b) => a[`price_${fuelType}`] - b[`price_${fuelType}`])
+                    .map(station => ({
+                        degaline: station.degaline,
+                        vieta: station.vieta,
+                        kaina: station[`price_${fuelType}`],
+                        atstumas_km: parseFloat(station.distance_km.toFixed(2)),
+                        latitude: station.latitude,
+                        longitude: station.longitude,
+                        address: station.address
+                    }));
+                
+                displayResults(nearby, lat, lon, fuelType);
+                document.getElementById('loading').style.display = 'none';
+            }, 500);
+        }
+        
+        // Rodyti rezultatus
+        function displayResults(stations, userLat, userLon, fuelType) {
+            // Nuvalyti žemėlapį
+            stationMarkers.forEach(marker => map.removeLayer(marker));
+            stationMarkers = [];
+            if (userMarker) map.removeLayer(userMarker);
+            
+            // Pridėti vartotojo žymę
+            userMarker = L.circleMarker([userLat, userLon], {
+                radius: 8,
+                fillColor: "#667eea",
+                color: "#fff",
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(map).bindPopup('Jūsų lokacija');
+            
+            if (!stations || stations.length === 0) {
+                showError('Nėra degalinių šalia jūsų');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('results');
+            const stationsList = document.getElementById('stations-list');
+            stationsList.innerHTML = '';
+            
+            // Rodyti geriausią pasiūlymą
+            const bestStation = stations[0];
+            const fuelTypeNames = {
+                '95': 'Benzinas 95',
+                '98': 'Benzinas 98',
+                'D': 'Dyzelis',
+                'LPG': 'LPG'
+            };
+            
+            const bestOfferDiv = document.getElementById('best-offer');
+            bestOfferDiv.innerHTML = `
+                <div class="best-offer">
+                    <h3>🏆 Geriausia pasiūlyma!</h3>
+                    <p><strong>${bestStation.degaline}</strong></p>
+                    <p>${bestStation.vieta} | <strong>${bestStation.atstumas_km} km nuo jūsų</strong></p>
+                    <p style="font-size: 1.3em; margin-top: 10px;">
+                        <strong>€${bestStation.kaina.toFixed(2)}</strong> ${fuelTypeNames[fuelType]}
+                    </p>
+                </div>
+            `;
+            
+            // Rodyti visas degalines
+            stations.slice(0, 10).forEach((station, index) => {
+                const card = document.createElement('div');
+                card.className = 'station-card';
+                card.innerHTML = `
+                    <h3>${index + 1}. ${station.degaline}</h3>
+                    <div class="station-info">
+                        <div>
+                            <strong>Vieta:</strong> ${station.vieta}<br>
+                            <strong>Adresas:</strong> ${station.address}
+                        </div>
+                        <div style="text-align: right;">
+                            <span class="price-badge">€${station.kaina.toFixed(2)}</span><br>
+                            <span class="distance-badge">${station.atstumas_km} km</span>
+                        </div>
+                    </div>
+                `;
+                stationsList.appendChild(card);
+                
+                // Pridėti žemėlapyje
+                const marker = L.marker([station.latitude, station.longitude], {
+                    title: station.degaline
+                }).addTo(map);
+                marker.bindPopup(`
+                    <b>${station.degaline}</b><br>
+                    €${station.kaina.toFixed(2)}<br>
+                    ${station.atstumas_km} km
+                `);
+                stationMarkers.push(marker);
+            });
+            
+            resultsDiv.style.display = 'block';
+            
+            // Zoom į visas žymes
+            if (stationMarkers.length > 0) {
+                const group = new L.featureGroup([userMarker, ...stationMarkers]);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+        
+        // Inicijalizuoti
+        window.addEventListener('load', initMap);
+    </script>
+</body>
+</html>
