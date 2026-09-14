@@ -277,7 +277,7 @@
         </header>
         
         <div class="info-banner">
-            📊 Duomenys iš Lietuvos energetikos agentūros (LEA) per fuel-prices.eu API
+            📊 Duomenys iš Lietuvos energetikos agentūros (LEA)
         </div>
         
         <div class="content">
@@ -333,7 +333,7 @@
                 <div class="error" id="error"></div>
                 <div class="loading" id="loading">
                     <div class="spinner"></div>
-                    Ieškoma degalinių...
+                    Įkeliant degalinių...
                 </div>
             </div>
             
@@ -372,7 +372,7 @@
         
         // Apskaičiuoti atstumą (Haversine formulė)
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Žemės spindulys km
+            const R = 6371;
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = 
@@ -392,33 +392,49 @@
             }).addTo(map);
         }
         
-        // Gauti duomenis iš fuel-prices.eu API
+        // Gauti duomenis iš API su CORS proxy
         async function fetchFuelPrices() {
             try {
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('error').style.display = 'none';
                 
-                const response = await fetch('https://fuel-prices.eu/api/stations/');
-                if (!response.ok) throw new Error(`API klaida: ${response.status}`);
+                // Naudojame CORS proxy serverį
+                const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+                const apiUrl = 'https://www.fuel-prices.eu/api/stations/';
+                
+                console.log('Kraunami duomenys iš:', apiUrl);
+                
+                const response = await fetch(proxyUrl + apiUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
                 
                 const data = await response.json();
-                allStations = data.stations || [];
+                allStations = data.stations || data || [];
                 
-                showSuccess(`Sėkmingai įkelti ${allStations.length} degalinių`);
-                console.log('Įkeltos degalinės:', allStations.length);
+                if (allStations.length === 0) {
+                    throw new Error('Duomenys nepavyko gauti');
+                }
+                
+                showSuccess(`✅ Sėkmingai įkelti ${allStations.length} degalinių`);
+                console.log('Duomenys įkelti:', allStations.length);
                 
                 document.getElementById('loading').style.display = 'none';
             } catch (error) {
-                showError('Nepavyko įkelti duomenų iš API: ' + error.message);
                 console.error('API klaida:', error);
-                document.getElementById('loading').style.display = 'none';
+                showError('⚠️ API nepasiekiama. Naudojami sample duomenys.');
                 loadFallbackData();
+                document.getElementById('loading').style.display = 'none';
             }
         }
         
-        // Fallback duomenys jei API nepasiekiama
+        // Sample/Fallback duomenys
         function loadFallbackData() {
-            showError('API nepasiekiama. Naudojami fallback duomenys.');
             allStations = [
                 {name: "Statoil Vilnius", latitude: 54.6872, longitude: 25.2797, prices: {E5: 1.45, E10: 1.55, B7: 1.32, LPG: 0.65}},
                 {name: "Shell Vilnius", latitude: 54.6900, longitude: 25.2800, prices: {E5: 1.47, E10: 1.57, B7: 1.29, LPG: 0.67}},
@@ -426,7 +442,14 @@
                 {name: "Lukoil Vilnius", latitude: 54.7000, longitude: 25.2600, prices: {E5: 1.42, E10: 1.52, B7: 1.31, LPG: 0.64}},
                 {name: "Statoil Kaunas", latitude: 54.8973, longitude: 23.9021, prices: {E5: 1.44, E10: 1.54, B7: 1.31, LPG: 0.65}},
                 {name: "Shell Kaunas", latitude: 54.9000, longitude: 23.9050, prices: {E5: 1.46, E10: 1.56, B7: 1.28, LPG: 0.68}},
+                {name: "OMV Kaunas", latitude: 54.8900, longitude: 23.9100, prices: {E5: 1.42, E10: 1.52, B7: 1.32, LPG: 0.66}},
+                {name: "Statoil Klaipėda", latitude: 55.7206, longitude: 21.1441, prices: {E5: 1.46, E10: 1.56, B7: 1.33, LPG: 0.67}},
+                {name: "Shell Klaipėda", latitude: 55.7230, longitude: 21.1470, prices: {E5: 1.48, E10: 1.58, B7: 1.30, LPG: 0.69}},
+                {name: "Statoil Šiauliai", latitude: 55.9311, longitude: 23.3162, prices: {E5: 1.43, E10: 1.53, B7: 1.30, LPG: 0.65}},
+                {name: "OMV Šiauliai", latitude: 55.9350, longitude: 23.3200, prices: {E5: 1.41, E10: 1.51, B7: 1.31, LPG: 0.64}},
+                {name: "Statoil Panevėžys", latitude: 55.7386, longitude: 24.3633, prices: {E5: 1.44, E10: 1.54, B7: 1.32, LPG: 0.66}},
             ];
+            console.log('Naudojami fallback duomenys:', allStations.length);
         }
         
         // Rodyti klaidą
@@ -446,7 +469,7 @@
             successDiv.style.display = 'block';
             setTimeout(() => {
                 successDiv.style.display = 'none';
-            }, 3000);
+            }, 5000);
         }
         
         // Pasirinko lokacija
@@ -475,19 +498,19 @@
                         document.getElementById('location-select').value = '';
                         map.setView([lat, lon], 12);
                         document.getElementById('loading').style.display = 'none';
-                        showSuccess('Jūsų lokacija nustatyta');
+                        showSuccess('✅ Jūsų lokacija nustatyta');
                     },
                     function(error) {
-                        showError('Nepavyko gauti jūsų lokacijos: ' + error.message);
+                        showError('❌ Nepavyko gauti jūsų lokacijos');
                         document.getElementById('loading').style.display = 'none';
                     }
                 );
             } else {
-                showError('Jūsų naršyklė nepalaiko geolokacijos');
+                showError('Naršyklė nepalaiko geolokacijos');
             }
         }
         
-        // Ieškoti degalini��
+        // Ieškoti degalinių
         function searchStations() {
             const lat = parseFloat(document.getElementById('latitude').value);
             const lon = parseFloat(document.getElementById('longitude').value);
@@ -495,12 +518,12 @@
             const radius = parseFloat(document.getElementById('radius').value);
             
             if (!lat || !lon) {
-                showError('Prašome pasirinkti lokacija');
+                showError('Pasirinkite lokacija');
                 return;
             }
             
             if (allStations.length === 0) {
-                showError('Duomenys dar nėra įkelti. Pabandykite vėliau.');
+                showError('Duomenys dar neįkelti. Pabandykite vėliau.');
                 return;
             }
             
@@ -510,7 +533,6 @@
             
             setTimeout(() => {
                 try {
-                    // Filtruoti ir rūšiuoti degalines
                     const nearby = allStations
                         .map(station => ({
                             ...station,
@@ -534,22 +556,20 @@
                     showSuccess(`Rasta ${nearby.length} degalinių`);
                 } catch (error) {
                     showError('Paieškos klaida: ' + error.message);
-                    console.error('Paieškos klaida:', error);
+                    console.error('Klaida:', error);
                 } finally {
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('search-btn').disabled = false;
                 }
-            }, 500);
+            }, 300);
         }
         
         // Rodyti rezultatus
         function displayResults(stations, userLat, userLon, fuelType) {
-            // Nuvalyti žemėlapį
             stationMarkers.forEach(marker => map.removeLayer(marker));
             stationMarkers = [];
             if (userMarker) map.removeLayer(userMarker);
             
-            // Pridėti vartotojo žymę
             userMarker = L.circleMarker([userLat, userLon], {
                 radius: 8,
                 fillColor: "#667eea",
@@ -557,7 +577,7 @@
                 weight: 2,
                 opacity: 1,
                 fillOpacity: 0.8
-            }).addTo(map).bindPopup('Jūsų lokacija');
+            }).addTo(map).bindPopup('📍 Jūsų lokacija');
             
             if (!stations || stations.length === 0) {
                 showError('Nėra degalinių šalia jūsų');
@@ -568,7 +588,6 @@
             const stationsList = document.getElementById('stations-list');
             stationsList.innerHTML = '';
             
-            // Rodyti geriausią pasiūlymą
             const bestStation = stations[0];
             const bestOfferDiv = document.getElementById('best-offer');
             bestOfferDiv.innerHTML = `
@@ -582,15 +601,14 @@
                 </div>
             `;
             
-            // Rodyti visas degalines
-            stations.slice(0, 10).forEach((station, index) => {
+            stations.slice(0, 15).forEach((station, index) => {
                 const card = document.createElement('div');
                 card.className = 'station-card';
                 card.innerHTML = `
                     <h3>${index + 1}. ${station.degaline}</h3>
                     <div class="station-info">
                         <div>
-                            <strong>Tipo:</strong> ${FUEL_TYPE_NAMES[fuelType]}
+                            <strong>Kuro tipas:</strong> ${FUEL_TYPE_NAMES[fuelType]}
                         </div>
                         <div style="text-align: right;">
                             <span class="price-badge">€${station.kaina.toFixed(2)}</span><br>
@@ -600,7 +618,6 @@
                 `;
                 stationsList.appendChild(card);
                 
-                // Pridėti žemėlapyje
                 const marker = L.marker([station.latitude, station.longitude], {
                     title: station.degaline
                 }).addTo(map);
@@ -614,7 +631,6 @@
             
             resultsDiv.style.display = 'block';
             
-            // Zoom į visas žymes
             if (stationMarkers.length > 0) {
                 const group = new L.featureGroup([userMarker, ...stationMarkers]);
                 map.fitBounds(group.getBounds().pad(0.1));
