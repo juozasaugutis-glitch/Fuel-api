@@ -46,6 +46,14 @@
             opacity: 0.9;
         }
         
+        .info-banner {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 12px 20px;
+            border-left: 4px solid #1976d2;
+            font-size: 0.9em;
+        }
+        
         .content {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -114,6 +122,11 @@
         button:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         
         button.secondary {
@@ -210,10 +223,35 @@
             color: #667eea;
         }
         
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         .error {
             background: #f8d7da;
             border: 1px solid #f5c6cb;
             color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
             padding: 15px;
             border-radius: 5px;
             margin-top: 15px;
@@ -235,8 +273,12 @@
     <div class="container">
         <header>
             <h1>⛽ Degaliniu Kainu Palyginimas</h1>
-            <p>Raskite pigiausią degalinę šalia jūsų su integruotu žemėlapiu (offline versija)</p>
+            <p>Raskite pigiausią degalinę šalia jūsų su tikrais duomenimis</p>
         </header>
+        
+        <div class="info-banner">
+            📊 Duomenys iš Lietuvos energetikos agentūros (LEA) per fuel-prices.eu API
+        </div>
         
         <div class="content">
             <div class="search-panel">
@@ -270,9 +312,9 @@
                 <div class="form-group">
                     <label for="fuel-type">Kuro tipas:</label>
                     <select id="fuel-type">
-                        <option value="95">Benzinas 95</option>
-                        <option value="98">Benzinas 98</option>
-                        <option value="D">Dyzelis</option>
+                        <option value="E5">Benzinas 95 (E5)</option>
+                        <option value="E10">Benzinas 98 (E10)</option>
+                        <option value="B7">Dyzelis (B7)</option>
                         <option value="LPG">LPG</option>
                     </select>
                 </div>
@@ -283,12 +325,16 @@
                 </div>
                 
                 <div class="button-group">
-                    <button onclick="searchStations()">🔍 Ieškoti</button>
+                    <button id="search-btn" onclick="searchStations()">🔍 Ieškoti</button>
                     <button class="secondary" onclick="getUserLocation()">📍 Mano lokacija</button>
                 </div>
                 
+                <div class="success" id="success"></div>
                 <div class="error" id="error"></div>
-                <div class="loading" id="loading">Ieškoma degalinių...</div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    Ieškoma degalinių...
+                </div>
             </div>
             
             <div class="map-container">
@@ -304,32 +350,6 @@
     </div>
     
     <script>
-        // Sample duomenys - Lietuvos degalinės
-        const FUEL_STATIONS = [
-            // Vilnius
-            {degaline: "Statoil Vilnius", vieta: "Vilnius", latitude: 54.6872, longitude: 25.2797, price_95: 1.45, price_98: 1.55, price_D: 1.32, price_LPG: 0.65, address: "Geležinio Vilko g. 10"},
-            {degaline: "Shell Vilnius", vieta: "Vilnius", latitude: 54.6900, longitude: 25.2800, price_95: 1.47, price_98: 1.57, price_D: 1.29, price_LPG: 0.67, address: "Konstitucijos pr. 7"},
-            {degaline: "OMV Vilnius", vieta: "Vilnius", latitude: 54.6850, longitude: 25.2850, price_95: 1.43, price_98: 1.53, price_D: 1.30, price_LPG: 0.66, address: "Žvėrynų g. 1"},
-            {degaline: "Lukoil Vilnius", vieta: "Vilnius", latitude: 54.7000, longitude: 25.2600, price_95: 1.42, price_98: 1.52, price_D: 1.31, price_LPG: 0.64, address: "Žemynos g. 5"},
-            
-            // Kaunas
-            {degaline: "Statoil Kaunas", vieta: "Kaunas", latitude: 54.8973, longitude: 23.9021, price_95: 1.44, price_98: 1.54, price_D: 1.31, price_LPG: 0.65, address: "Karaliaus Mindaugo pr. 10"},
-            {degaline: "Shell Kaunas", vieta: "Kaunas", latitude: 54.9000, longitude: 23.9050, price_95: 1.46, price_98: 1.56, price_D: 1.28, price_LPG: 0.68, address: "Laisvės a. 99"},
-            {degaline: "OMV Kaunas", vieta: "Kaunas", latitude: 54.8900, longitude: 23.9100, price_95: 1.42, price_98: 1.52, price_D: 1.32, price_LPG: 0.66, address: "Savanorių pr. 281"},
-            
-            // Klaipėda
-            {degaline: "Statoil Klaipėda", vieta: "Klaipėda", latitude: 55.7206, longitude: 21.1441, price_95: 1.46, price_98: 1.56, price_D: 1.33, price_LPG: 0.67, address: "Taikos pr. 50"},
-            {degaline: "Shell Klaipėda", vieta: "Klaipėda", latitude: 55.7230, longitude: 21.1470, price_95: 1.48, price_98: 1.58, price_D: 1.30, price_LPG: 0.69, address: "Nemuno g. 1"},
-            
-            // Šiauliai
-            {degaline: "Statoil Šiauliai", vieta: "Šiauliai", latitude: 55.9311, longitude: 23.3162, price_95: 1.43, price_98: 1.53, price_D: 1.30, price_LPG: 0.65, address: "Vilniaus g. 140"},
-            {degaline: "OMV Šiauliai", vieta: "Šiauliai", latitude: 55.9350, longitude: 23.3200, price_95: 1.41, price_98: 1.51, price_D: 1.31, price_LPG: 0.64, address: "Panevėžio g. 50"},
-            
-            // Panevėžys
-            {degaline: "Statoil Panevėžys", vieta: "Panevėžys", latitude: 55.7386, longitude: 24.3633, price_95: 1.44, price_98: 1.54, price_D: 1.32, price_LPG: 0.66, address: "Respublikos a. 10"},
-            {degaline: "Shell Panevėžys", vieta: "Panevėžys", latitude: 55.7410, longitude: 24.3660, price_95: 1.47, price_98: 1.57, price_D: 1.29, price_LPG: 0.68, address: "Laisės g. 5"},
-        ];
-        
         const LOCATIONS = {
             vilnius: [54.6872, 25.2797],
             kaunas: [54.8973, 23.9021],
@@ -338,9 +358,17 @@
             panevezys: [55.7386, 24.3633]
         };
         
+        const FUEL_TYPE_NAMES = {
+            'E5': 'Benzinas 95',
+            'E10': 'Benzinas 98',
+            'B7': 'Dyzelis',
+            'LPG': 'LPG'
+        };
+        
         let map;
         let userMarker;
         let stationMarkers = [];
+        let allStations = [];
         
         // Apskaičiuoti atstumą (Haversine formulė)
         function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -362,6 +390,63 @@
                 attribution: '© OpenStreetMap contributors',
                 maxZoom: 19
             }).addTo(map);
+        }
+        
+        // Gauti duomenis iš fuel-prices.eu API
+        async function fetchFuelPrices() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+                
+                const response = await fetch('https://fuel-prices.eu/api/stations/');
+                if (!response.ok) throw new Error(`API klaida: ${response.status}`);
+                
+                const data = await response.json();
+                allStations = data.stations || [];
+                
+                showSuccess(`Sėkmingai įkelti ${allStations.length} degalinių`);
+                console.log('Įkeltos degalinės:', allStations.length);
+                
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                showError('Nepavyko įkelti duomenų iš API: ' + error.message);
+                console.error('API klaida:', error);
+                document.getElementById('loading').style.display = 'none';
+                loadFallbackData();
+            }
+        }
+        
+        // Fallback duomenys jei API nepasiekiama
+        function loadFallbackData() {
+            showError('API nepasiekiama. Naudojami fallback duomenys.');
+            allStations = [
+                {name: "Statoil Vilnius", latitude: 54.6872, longitude: 25.2797, prices: {E5: 1.45, E10: 1.55, B7: 1.32, LPG: 0.65}},
+                {name: "Shell Vilnius", latitude: 54.6900, longitude: 25.2800, prices: {E5: 1.47, E10: 1.57, B7: 1.29, LPG: 0.67}},
+                {name: "OMV Vilnius", latitude: 54.6850, longitude: 25.2850, prices: {E5: 1.43, E10: 1.53, B7: 1.30, LPG: 0.66}},
+                {name: "Lukoil Vilnius", latitude: 54.7000, longitude: 25.2600, prices: {E5: 1.42, E10: 1.52, B7: 1.31, LPG: 0.64}},
+                {name: "Statoil Kaunas", latitude: 54.8973, longitude: 23.9021, prices: {E5: 1.44, E10: 1.54, B7: 1.31, LPG: 0.65}},
+                {name: "Shell Kaunas", latitude: 54.9000, longitude: 23.9050, prices: {E5: 1.46, E10: 1.56, B7: 1.28, LPG: 0.68}},
+            ];
+        }
+        
+        // Rodyti klaidą
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 8000);
+        }
+        
+        // Rodyti sėkmę
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 3000);
         }
         
         // Pasirinko lokacija
@@ -390,6 +475,7 @@
                         document.getElementById('location-select').value = '';
                         map.setView([lat, lon], 12);
                         document.getElementById('loading').style.display = 'none';
+                        showSuccess('Jūsų lokacija nustatyta');
                     },
                     function(error) {
                         showError('Nepavyko gauti jūsų lokacijos: ' + error.message);
@@ -401,17 +487,7 @@
             }
         }
         
-        // Rodyti klaidą
-        function showError(message) {
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 5000);
-        }
-        
-        // Ieškoti degalinių
+        // Ieškoti degalini��
         function searchStations() {
             const lat = parseFloat(document.getElementById('latitude').value);
             const lon = parseFloat(document.getElementById('longitude').value);
@@ -423,31 +499,46 @@
                 return;
             }
             
+            if (allStations.length === 0) {
+                showError('Duomenys dar nėra įkelti. Pabandykite vėliau.');
+                return;
+            }
+            
             document.getElementById('loading').style.display = 'block';
             document.getElementById('error').style.display = 'none';
+            document.getElementById('search-btn').disabled = true;
             
-            // Šiame timeout simuluojame API kvietimą
             setTimeout(() => {
-                // Filtruoti ir rūšiuoti degalines
-                const nearby = FUEL_STATIONS
-                    .map(station => ({
-                        ...station,
-                        distance_km: calculateDistance(lat, lon, station.latitude, station.longitude)
-                    }))
-                    .filter(station => station.distance_km <= radius && station[`price_${fuelType}`])
-                    .sort((a, b) => a[`price_${fuelType}`] - b[`price_${fuelType}`])
-                    .map(station => ({
-                        degaline: station.degaline,
-                        vieta: station.vieta,
-                        kaina: station[`price_${fuelType}`],
-                        atstumas_km: parseFloat(station.distance_km.toFixed(2)),
-                        latitude: station.latitude,
-                        longitude: station.longitude,
-                        address: station.address
-                    }));
-                
-                displayResults(nearby, lat, lon, fuelType);
-                document.getElementById('loading').style.display = 'none';
+                try {
+                    // Filtruoti ir rūšiuoti degalines
+                    const nearby = allStations
+                        .map(station => ({
+                            ...station,
+                            distance_km: calculateDistance(lat, lon, station.latitude, station.longitude)
+                        }))
+                        .filter(station => 
+                            station.distance_km <= radius && 
+                            station.prices && 
+                            station.prices[fuelType]
+                        )
+                        .map(station => ({
+                            degaline: station.name,
+                            kaina: station.prices[fuelType],
+                            atstumas_km: parseFloat(station.distance_km.toFixed(2)),
+                            latitude: station.latitude,
+                            longitude: station.longitude
+                        }))
+                        .sort((a, b) => a.kaina - b.kaina);
+                    
+                    displayResults(nearby, lat, lon, fuelType);
+                    showSuccess(`Rasta ${nearby.length} degalinių`);
+                } catch (error) {
+                    showError('Paieškos klaida: ' + error.message);
+                    console.error('Paieškos klaida:', error);
+                } finally {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('search-btn').disabled = false;
+                }
             }, 500);
         }
         
@@ -479,21 +570,14 @@
             
             // Rodyti geriausią pasiūlymą
             const bestStation = stations[0];
-            const fuelTypeNames = {
-                '95': 'Benzinas 95',
-                '98': 'Benzinas 98',
-                'D': 'Dyzelis',
-                'LPG': 'LPG'
-            };
-            
             const bestOfferDiv = document.getElementById('best-offer');
             bestOfferDiv.innerHTML = `
                 <div class="best-offer">
                     <h3>🏆 Geriausia pasiūlyma!</h3>
                     <p><strong>${bestStation.degaline}</strong></p>
-                    <p>${bestStation.vieta} | <strong>${bestStation.atstumas_km} km nuo jūsų</strong></p>
+                    <p><strong>${bestStation.atstumas_km} km nuo jūsų</strong></p>
                     <p style="font-size: 1.3em; margin-top: 10px;">
-                        <strong>€${bestStation.kaina.toFixed(2)}</strong> ${fuelTypeNames[fuelType]}
+                        <strong>€${bestStation.kaina.toFixed(2)}</strong> / ${FUEL_TYPE_NAMES[fuelType]}
                     </p>
                 </div>
             `;
@@ -506,8 +590,7 @@
                     <h3>${index + 1}. ${station.degaline}</h3>
                     <div class="station-info">
                         <div>
-                            <strong>Vieta:</strong> ${station.vieta}<br>
-                            <strong>Adresas:</strong> ${station.address}
+                            <strong>Tipo:</strong> ${FUEL_TYPE_NAMES[fuelType]}
                         </div>
                         <div style="text-align: right;">
                             <span class="price-badge">€${station.kaina.toFixed(2)}</span><br>
@@ -539,7 +622,10 @@
         }
         
         // Inicijalizuoti
-        window.addEventListener('load', initMap);
+        window.addEventListener('load', function() {
+            initMap();
+            fetchFuelPrices();
+        });
     </script>
 </body>
 </html>
